@@ -463,6 +463,7 @@ func main() {
 	}
 
 	var lastData RigData
+	lastUpdate := time.Time{}
 	log.Infof("Starting WaveLogGoat polling every %s...", intervalDuration)
 
 	for {
@@ -481,7 +482,8 @@ func main() {
 			continue
 		}
 
-		if currentData == lastData {
+		sinceLast := time.Now().Sub(lastUpdate)
+		if currentData == lastData && sinceLast < time.Minute {
 			log.Debug("Radio data unchanged. Skipping update.")
 			continue
 		}
@@ -494,6 +496,7 @@ func main() {
 		}
 
 		lastData = currentData
+		lastUpdate = time.Now()
 		log.Debug("Successfully updated Wavelog.")
 	}
 }
