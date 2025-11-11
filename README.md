@@ -36,6 +36,8 @@ chmod +x waveloggoat
 
 You must have the [Go](https://go.dev/doc/install) toolchain (version 1.21+) installed.
 
+It is recommended to have [GoReaser installed](https://goreleaser.com/install/)
+
 ```sh
 # git clone https://github.com/johnsonm/WaveLogGoat
 # cd WaveLogGoat
@@ -43,7 +45,10 @@ You must have the [Go](https://go.dev/doc/install) toolchain (version 1.21+) ins
 # Download dependencies
 go mod tidy
 
-# Build the binary
+# Build the binary with goreleaser
+goreleaser build
+
+# Or build the binary with go
 go build
 ```
 
