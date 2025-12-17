@@ -532,6 +532,17 @@ func startQSYServer(port int, radioClient RadioClient) (*QSYServer, error) {
 
 	// Handle WaveLogGate-compatible QSY endpoint: /{frequency}/{mode}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers to allow requests from any origin
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		// Handle preflight OPTIONS requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		// Extract frequency and mode from URL path
 		path := strings.Trim(r.URL.Path, "/")
 		parts := strings.Split(path, "/")
@@ -564,17 +575,29 @@ func startQSYServer(port int, radioClient RadioClient) (*QSYServer, error) {
 
 		// Set frequency and mode
 		if err := server.client.SetData(frequency, strings.ToUpper(mode)); err != nil {
-			log.Errorf("QSY failed: %v", err)
-			http.Error(w, fmt.Sprintf("QSY failed: %v", err), http.StatusInternalServerError)
+			log.Warnf("QSY failed - radio control software may not be running: %v", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			response := map[string]string{
+				"error": "QSY failed: radio control software not available",
+				"details": err.Error(),
+			}
+			json.NewEncoder(w).Encode(response)
 			return
 		}
 
 		log.Infof("QSY successful: frequency=%s Hz, mode=%s", freqStr, strings.ToUpper(mode))
 
 		// Return success response
-		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "QSY successful: frequency=%s Hz, mode=%s", freqStr, strings.ToUpper(mode))
+		response := map[string]interface{}{
+			"status": "success",
+			"message": fmt.Sprintf("QSY successful: frequency=%s Hz, mode=%s", freqStr, strings.ToUpper(mode)),
+			"frequency": frequency,
+			"mode": strings.ToUpper(mode),
+		}
+		json.NewEncoder(w).Encode(response)
 	})
 
 	httpServer := &http.Server{
